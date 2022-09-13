@@ -9,7 +9,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 
 def build_extensions():
     """Used the subprocess module to compile/install the C software."""
-    src_path = PurePath(current_directory)/'interp'
+    src_path = PurePath(current_directory)/'interpolation2_3D'
 
     subprocess.run('./compile.bash', cwd=src_path, shell=False, check=True,
             stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -36,7 +36,7 @@ except Exception:
 setup(
 
 # Project name:
-name='interpolation',
+name='interpolation2-3D',
 
 # Packages to include in the distribution:
 packages=find_packages(','),

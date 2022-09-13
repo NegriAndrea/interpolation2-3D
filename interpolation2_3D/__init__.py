@@ -1,3 +1,3 @@
-from .interpolate2d import *
+from .interpolate2d import init, interpolate_call, interpolate_call_jit, interpolate2_3D
 
-__all__ = ['interpolate2_3D', 'init', 'interpolate_call']
+__all__ = ['init', 'interpolate_call', 'interpolate_call_jit']

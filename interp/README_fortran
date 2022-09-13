@@ -1,0 +1,31 @@
+Some parts of the code are really computational intensive. Up to now, I changed the intepolation algorithm (bilinear interpolation with scipy RegularGridInterpolation), that is a pure python interpolation in N dimensions, with an algorithm that performs 2D interpolation on a 3D grid, since we don't interpolate along the 3rd dimension (we don't interpolate in Lambda in a spectrum). The new object is contained in interpolate2d.py, and it is coded both in python+numpy, gaining a factor of 3. With an implementation in fortran, I gained a speedup of 10.
+
+The same goes for the convolution of the spectra with filters, I eliminated (actually copied to obtain it in a contiguous way) the structured array, and re-coded the loop in fortran, having ~20 of speedup, avoiding to use also a very big temporary array that is needed to be allocated for every filter for the multiplication 
+
+sed[:, globals_mod.k0[iFilter]:globals_mod.k1[iFilter]] *  globals_mod.filterResponse_CC[iFilter,globals_mod.j0[iFilter]:globals_mod.j1[iFilter]]
+
+while in fortran I require a constant 1D array of len=sed.shape[0], allocated only once, independent of the number of filters.
+
+The python code is much more clear, so I leave it there commented, while the code uses the fortran version.
+
+Motivation for using Fortran oppising to C: I'm not a great coder in C, I tried to implement a function and it was working, but with a modest speed-up, even with the -O2 flag activated in gcc. Bein proficient in Fortran, I knew how to do it efficiently. The big issue is that we work with multi-dimensional arrays, that are stored usually in row-major in numpy (and also the rest of this python code has been written by me taking this into account). Sending 2 or 3 arrays to python would involve a copy and a trasposizion, that re handled directly by f2py. Not only I want ot avoid this, but using shared memory in multiprocessing means you have to be very careful in copying things.
+
+The approach is then this: for varables local to every thread, make sure it is contiguous, chnage the shape to 1D (array.size,) and then pass the array. DO NOT use np.flatten, since it copies the array, also .ravel can copy the array if it not contiguous, while changing the shape return an error and never does a copy, so it is safer.
+
+For shared arrays, created with Array(), they are C contiguous, so in every thread I take a view with the same datatype, and I change the shape of the view
+arr2 = arr.view(arr.dtype)
+arr2.shape = (arr.size,)
+
+So I obtain the 1D array without changing the shape of the original array, and WITHOUT DOING ANY COPY.
+
+On the fortran side, all the arrays need to be zero indexed (since I sometimes pass indexes from python, where they are zero-based). I also have to loop over the 2 or 3D arrays in fortran as 1D arrays, since
+
+arr[i,j,k] = arr_view1D[ i*d1*d2 + j*d1 + k]
+where
+
+d1 = arr.shape[1]
+d2 = arr.shape[2]
+
+
+This allow me to loop in C style over row major arrays in fortran. Of course every operations requires loops, but gfortran is REALLY good in optimizing loops.
+Keep in mind that arrays of integers in python are usually of 8 bytes, so to avoid a copy, I use integer*8 in fortran (in the case of scalars, I let f2py to handle an eventual copy since they are only input in in my code).

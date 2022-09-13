@@ -1,0 +1,10 @@
+*.hdf5
+*.h5
+*.dat
+*.pyc
+*.jpg
+nohup*
+*.out
+*.err
+*.o
+*.so

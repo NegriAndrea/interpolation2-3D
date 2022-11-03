@@ -73,7 +73,7 @@ author_email='anegri@iac.es',
 # keywords=[]
 
 # List project dependencies:
-install_requires=['numpy','scipy', 'pathlib', 'numba'],
+install_requires=['numpy','scipy', 'pathlib', 'numba', 'cffi'],
 
 
 cmdclass={'build_ext': build_ext}
